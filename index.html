@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0f0f1a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="My Tasks"/>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="icon" href="./icon.svg" type="image/svg+xml"/>
+<title>My Tasks</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0f0f1a;--card:#16162a;--card2:#1c1c32;
+  --border:#252540;--border2:#2e2e50;
+  --purple:#7c6af7;--pdim:#1e1a3e;
+  --teal:#3ecfcf;--red:#f97066;
+  --text:#e0e0f0;--muted:#666680;--muted2:#444460;
+  --done-bg:#121220;--done-bd:#2a2a3e;
+}
+
+html,body{
+  height:100%;background:var(--bg);
+  font-family:'DM Sans',sans-serif;color:var(--text);
+  overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
+}
+
+/* ── FULL MODE ── */
+body.full{display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding-bottom:40px}
+body.full .wrap{width:100%;max-width:520px;padding:0 18px}
+
+/* ── WIDGET MODE ── */
+body.widget{
+  display:flex;align-items:flex-start;justify-content:flex-start;
+  overflow:hidden;background:transparent;
+}
+body.widget .wrap{
+  width:320px;
+  background:rgba(15,15,26,0.97);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  padding:16px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 12px 60px rgba(0,0,0,.7);
+  overflow:hidden;
+  max-height:100vh;
+  overflow-y:auto;
+}
+
+/* hide some things in widget mode */
+body.widget .tabs,
+body.widget #panelHistory,
+body.widget .header-date,
+body.widget #streakEl{ display:none!important }
+
+body.widget .header{ padding-top:0 }
+body.widget .hdr-title{ font-size:18px }
+body.widget .hdr-sub{ font-size:11px;margin-top:3px }
+body.widget .rings-card{ padding:14px 4px;margin-top:14px;border-radius:16px }
+body.widget .add-row{ margin-top:10px;padding:8px 12px;border-radius:12px }
+body.widget .task{ padding:10px 12px;border-radius:11px }
+body.widget .task-list{ gap:6px;margin-top:8px;padding-bottom:8px }
+body.widget .task-name{ font-size:13px }
+body.widget .task-time{ font-size:10px;padding:2px 7px }
+
+/* ── Mode toggle button ── */
+.mode-btn{
+  position:fixed;bottom:18px;right:18px;
+  width:42px;height:42px;border-radius:50%;
+  background:var(--card2);border:1px solid var(--border2);
+  color:var(--muted);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  transition:all .2s;z-index:999;
+}
+.mode-btn:hover{background:var(--purple);border-color:var(--purple);color:#fff}
+body.widget .mode-btn{
+  position:static;width:28px;height:28px;font-size:13px;
+  margin-left:auto;display:flex;flex-shrink:0;
+  box-shadow:none;
+}
+
+/* ── Install banner ── */
+#installBanner{
+  display:none;width:100%;padding:12px 14px;margin-bottom:4px;
+  background:linear-gradient(135deg,#1e1a3e,#1a2a3e);
+  border:1px solid var(--purple);border-radius:16px;
+  align-items:center;gap:10px;
+}
+#installBanner.show{display:flex}
+body.widget #installBanner{display:none!important}
+.ib-text{flex:1;font-size:12px;color:var(--text);line-height:1.4}
+.ib-text strong{color:var(--purple)}
+.ib-btn{background:var(--purple);border:none;border-radius:9px;padding:7px 14px;color:#fff;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.ib-x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0}
+
+/* ── Header ── */
+.header{padding:28px 0 0;display:flex;flex-direction:column}
+.hdr-top{display:flex;align-items:flex-start;justify-content:space-between}
+.hdr-left{flex:1}
+.hdr-date{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+.hdr-title{font-size:26px;font-weight:700;letter-spacing:-.03em;color:#fff}
+.hdr-sub{color:var(--muted);font-size:13px;margin-top:4px}
+.streak{display:inline-flex;align-items:center;gap:5px;background:#2a1e10;border:1px solid #5a3a10;border-radius:20px;padding:3px 10px 3px 8px;font-size:11px;color:#f9a84d;font-weight:600;margin-top:6px}
+
+/* ── Rings ── */
+.rings-card{
+  background:var(--card);border-radius:22px;padding:20px 8px;margin-top:20px;
+  display:flex;justify-content:space-around;align-items:center;
+  border:1px solid var(--border);box-shadow:0 8px 48px rgba(0,0,0,.4)
+}
+.ring-divider{width:1px;height:66px;background:var(--border2)}
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.ring-label{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:6px;margin-top:18px}
+.tab{flex:1;padding:9px 0;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.04em;cursor:pointer;text-transform:uppercase;font-family:'DM Sans',sans-serif;transition:all .18s}
+.tab.active{background:var(--purple);border-color:var(--purple);color:#fff}
+
+/* ── Add row ── */
+.add-row{display:flex;gap:8px;align-items:center;background:var(--card);border-radius:14px;padding:10px 14px;border:1px solid var(--border);margin-top:12px}
+.add-row input[type=text]{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif}
+.add-row input[type=text]::placeholder{color:var(--muted2)}
+.add-row input[type=time]{background:none;border:none;outline:none;color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif;width:82px;cursor:pointer}
+.add-row input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.35);cursor:pointer}
+.add-btn{background:var(--purple);border:none;border-radius:10px;width:34px;height:34px;cursor:pointer;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .12s}
+.add-btn:active{transform:scale(.9)}
+
+/* ── Task list ── */
+.task-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-bottom:24px}
+.task-empty{text-align:center;color:var(--muted2);font-size:13px;margin-top:32px;line-height:1.7}
+.task{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:14px;padding:13px 15px;border:1px solid var(--border);transition:background .2s,border-color .2s}
+.task.done{background:var(--done-bg);border-color:var(--done-bd)}
+.checkbox{width:22px;height:22px;border-radius:7px;flex-shrink:0;border:2px solid var(--border2);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s}
+.checkbox.checked{background:var(--purple);border-color:var(--purple)}
+.task-name{flex:1;font-size:14px;color:var(--text);word-break:break-word;line-height:1.4;transition:color .2s}
+.task-name.done{color:var(--muted2);text-decoration:line-through}
+.task-time{font-size:11px;font-weight:600;color:var(--purple);background:var(--pdim);padding:3px 8px;border-radius:7px;flex-shrink:0;white-space:nowrap;transition:all .2s}
+.task-time.done{color:var(--muted2);background:var(--done-bd)}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--muted2);font-size:19px;padding:0 2px;line-height:1;flex-shrink:0;transition:color .15s}
+.del-btn:hover{color:var(--red)}
+
+/* ── History ── */
+.hf-row{display:flex;gap:6px;margin:12px 0}
+.hf-btn{flex:1;padding:8px 0;border-radius:11px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.06em;cursor:pointer;text-transform:uppercase;font-family:'DM Sans',sans-serif;transition:all .18s}
+.hf-btn.active{background:var(--card2);border-color:var(--border2);color:var(--text)}
+.history-rows{display:flex;flex-direction:column;gap:7px;padding-bottom:24px}
+.h-row{background:var(--card);border-radius:13px;padding:12px 15px;border:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.h-info{flex:1;min-width:0}
+.h-period{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.h-pct{font-size:14px;font-weight:700;flex-shrink:0}
+.cp{color:var(--purple)}.ct{color:var(--teal)}.cr{color:var(--red)}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body class="full" id="body">
+
+<!-- Install banner (only shown in full mode after hosting on GitHub Pages) -->
+<div id="installBanner">
+  <div class="ib-text"><strong>Install as app</strong> — pin to your Chromebook shelf</div>
+  <button class="ib-btn" id="installBtn">Install</button>
+  <button class="ib-x" onclick="dismissBanner()">×</button>
+</div>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="hdr-top">
+      <div class="hdr-left">
+        <div class="hdr-date" id="hdrDate"></div>
+        <div class="hdr-title">My Tasks</div>
+        <div class="hdr-sub" id="hdrSub">Loading…</div>
+        <div id="streakEl"></div>
+      </div>
+      <!-- Widget/Full toggle in header for widget mode -->
+      <button class="mode-btn" id="modeToggle" title="Toggle widget mode" onclick="toggleMode()">⊡</button>
+    </div>
+  </div>
+
+  <!-- Rings -->
+  <div class="rings-card">
+    <div class="ring-wrap">
+      <svg width="100" height="100" viewBox="0 0 110 110" id="ringD"></svg>
+      <div class="ring-label">Daily</div>
+    </div>
+    <div class="ring-divider"></div>
+    <div class="ring-wrap">
+      <svg width="100" height="100" viewBox="0 0 110 110" id="ringW"></svg>
+      <div class="ring-label">Weekly</div>
+    </div>
+    <div class="ring-divider"></div>
+    <div class="ring-wrap">
+      <svg width="100" height="100" viewBox="0 0 110 110" id="ringM"></svg>
+      <div class="ring-label">Monthly</div>
+    </div>
+  </div>
+
+  <!-- Tabs (full mode only) -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('today')">Today</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
+  </div>
+
+  <!-- Today panel -->
+  <div id="panelToday">
+    <div class="add-row">
+      <input type="text" id="taskInput" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addTask()"/>
+      <input type="time" id="timeInput"/>
+      <button class="add-btn" onclick="addTask()">+</button>
+    </div>
+    <div class="task-list" id="taskList"></div>
+  </div>
+
+  <!-- History panel (full mode only) -->
+  <div id="panelHistory" style="display:none">
+    <div class="hf-row">
+      <button class="hf-btn active" onclick="switchHF('daily')">Daily</button>
+      <button class="hf-btn" onclick="switchHF('weekly')">Weekly</button>
+      <button class="hf-btn" onclick="switchHF('monthly')">Monthly</button>
+    </div>
+    <div class="history-rows" id="historyRows"></div>
+  </div>
+
+</div>
+
+<!-- Floating toggle button (full mode only) -->
+<button class="mode-btn" id="floatToggle" style="display:none" title="Switch to widget mode" onclick="toggleMode()">⊡</button>
+
+<script>
+const SK="mytasks_v3";
+let state={tasks:[],history:{}};
+let activeTab="today",activeHF="daily",deferredPrompt=null;
+let isWidget=false;
+
+// ── PWA ──────────────────────────────────────────────────────────────────────
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById("installBanner").classList.add("show");
+});
+document.getElementById("installBtn").addEventListener("click",async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById("installBanner").classList.remove("show");
+});
+function dismissBanner(){document.getElementById("installBanner").classList.remove("show")}
+window.addEventListener("appinstalled",()=>document.getElementById("installBanner").classList.remove("show"));
+
+// ── Service worker ───────────────────────────────────────────────────────────
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+
+// ── Widget / Full toggle ──────────────────────────────────────────────────────
+function toggleMode(){
+  isWidget=!isWidget;
+  applyMode();
+  localStorage.setItem("mytasks_mode",isWidget?"widget":"full");
+}
+
+function applyMode(){
+  const body=document.getElementById("body");
+  const modeToggle=document.getElementById("modeToggle");
+  const floatToggle=document.getElementById("floatToggle");
+
+  if(isWidget){
+    body.className="widget";
+    modeToggle.textContent="⤢";
+    modeToggle.title="Switch to full view";
+    floatToggle.style.display="none";
+    // Force today tab
+    switchTab("today");
+  } else {
+    body.className="full";
+    modeToggle.style.display="none"; // hide header btn in full mode
+    floatToggle.style.display="flex";
+    floatToggle.textContent="⊡";
+    floatToggle.title="Switch to widget mode";
+  }
+  updateRings(); // re-draw rings at correct size
+}
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+function load(){
+  try{const r=localStorage.getItem(SK);state=r?JSON.parse(r):{tasks:[],history:{}};}
+  catch{state={tasks:[],history:{}};}
+  if(!state.history)state.history={};
+  if(!state.tasks)state.tasks=[];
+  isWidget=localStorage.getItem("mytasks_mode")==="widget";
+}
+function save(){try{localStorage.setItem(SK,JSON.stringify(state));}catch{}}
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function todayKey(){return new Date().toISOString().slice(0,10)}
+function weekKey(){
+  const d=new Date(),day=d.getDay();
+  const m=new Date(d);m.setDate(d.getDate()-day+(day===0?-6:1));
+  return"w_"+m.toISOString().slice(0,10);
+}
+function monthKey(){
+  const d=new Date();
+  return"m_"+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function fmtDate(iso){
+  const[y,mo,dd]=iso.split("-");
+  return new Date(+y,+mo-1,+dd).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
+}
+function fmtWeek(iso){
+  const d=new Date(iso),e=new Date(d);e.setDate(d.getDate()+6);
+  const f=dt=>dt.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  return`${f(d)} – ${f(e)}, ${e.getFullYear()}`;
+}
+function fmtMonth(s){
+  const[y,m]=s.split("-");
+  return new Date(+y,+m-1,1).toLocaleDateString("en-US",{month:"long",year:"numeric"});
+}
+
+// ── Calculations ──────────────────────────────────────────────────────────────
+function pct(done,total){return total?(done/total)*100:0}
+
+function calcStreak(){
+  let s=0,cur=new Date();cur.setDate(cur.getDate()-1);
+  for(let i=0;i<3650;i++){
+    const k=cur.toISOString().slice(0,10);
+    const e=state.history[k];if(!e||e.completed===0)break;
+    s++;cur.setDate(cur.getDate()-1);
+  }
+  const td=state.history[todayKey()];if(td&&td.completed>0)s++;
+  return s;
+}
+
+function snapshot(){
+  const today=todayKey();
+  const done=state.tasks.filter(t=>t.done).length;
+  state.history[today]={completed:done,total:state.tasks.length};
+
+  const wk=weekKey(),wkd=wk.replace("w_","");
+  const wd=Object.entries(state.history).filter(([k])=>k.length===10&&k>=wkd&&k<=today).map(([,v])=>v);
+  state.history[wk]={completed:wd.reduce((a,v)=>a+v.completed,0),total:wd.reduce((a,v)=>a+v.total,0)};
+
+  const mk=monthKey(),mks=mk.replace("m_","");
+  const md=Object.entries(state.history).filter(([k])=>k.length===10&&k.slice(0,7)===mks).map(([,v])=>v);
+  state.history[mk]={completed:md.reduce((a,v)=>a+v.completed,0),total:md.reduce((a,v)=>a+v.total,0)};
+
+  save();
+}
+
+// ── Rings ─────────────────────────────────────────────────────────────────────
+function drawRing(id,p,color,done,total){
+  const el=document.getElementById(id);
+  const r=40,cx=55,cy=55,circ=2*Math.PI*r,off=circ-(circ*Math.min(p,100)/100);
+  const fs=isWidget?"12":"15";
+  el.innerHTML=`
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a30" stroke-width="11"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="11"
+      stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"
+      stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
+      style="transition:stroke-dashoffset .7s cubic-bezier(.4,2,.6,1)"/>
+    <text x="${cx}" y="${cy-3}" text-anchor="middle" fill="#fff"
+      font-size="${fs}" font-weight="700" font-family="'DM Sans',sans-serif">${Math.round(p)}%</text>
+    <text x="${cx}" y="${cy+13}" text-anchor="middle" fill="#666680"
+      font-size="9" font-family="'DM Sans',sans-serif">${done}/${total}</text>`;
+}
+
+function updateRings(){
+  const ld=state.tasks.filter(t=>t.done).length,lt=state.tasks.length;
+  const wH=state.history[weekKey()]||{completed:0,total:0};
+  const mH=state.history[monthKey()]||{completed:0,total:0};
+  drawRing("ringD",pct(ld,lt),"#7c6af7",ld,lt);
+  drawRing("ringW",pct(wH.completed,wH.total),"#3ecfcf",wH.completed,wH.total);
+  drawRing("ringM",pct(mH.completed,mH.total),"#f97066",mH.completed,mH.total);
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+function updateHeader(){
+  const done=state.tasks.filter(t=>t.done).length,total=state.tasks.length;
+  document.getElementById("hdrDate").textContent=
+    new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+  document.getElementById("hdrSub").textContent=
+    total?`${done} of ${total} tasks done today`:"No tasks yet — add one below";
+  const s=calcStreak();
+  document.getElementById("streakEl").innerHTML=
+    s>=2?`<div class="streak">🔥 ${s}-day streak</div>`:"";
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+function fmt12(t){
+  if(!t)return"";const[h,m]=t.split(":");const hr=parseInt(h,10);
+  return`${hr%12||12}:${m} ${hr>=12?"PM":"AM"}`;
+}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+function renderTasks(){
+  const el=document.getElementById("taskList");
+  const sorted=[...state.tasks].sort((a,b)=>{
+    if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return-1;
+    return a.time.localeCompare(b.time);
+  });
+  if(!sorted.length){
+    el.innerHTML=`<div class="task-empty">Nothing here yet.<br/>Type above and hit Enter ↵</div>`;return;
+  }
+  el.innerHTML=sorted.map(t=>`
+    <div class="task${t.done?" done":""}">
+      <div class="checkbox${t.done?" checked":""}" onclick="toggle(${t.id})">
+        ${t.done?`<svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M2 6.5L5.5 10L11 3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`:""}
+      </div>
+      <span class="task-name${t.done?" done":""}">${esc(t.name)}</span>
+      ${t.time?`<span class="task-time${t.done?" done":""}">${fmt12(t.time)}</span>`:""}
+      <button class="del-btn" onclick="remove(${t.id})">×</button>
+    </div>`).join("");
+}
+
+function addTask(){
+  const inp=document.getElementById("taskInput"),name=inp.value.trim();
+  if(!name)return;
+  state.tasks.push({id:Date.now(),name,time:document.getElementById("timeInput").value,done:false});
+  inp.value="";document.getElementById("timeInput").value="";
+  refresh();inp.focus();
+}
+function toggle(id){const t=state.tasks.find(t=>t.id===id);if(t)t.done=!t.done;refresh();}
+function remove(id){state.tasks=state.tasks.filter(t=>t.id!==id);refresh();}
+
+function refresh(){snapshot();updateHeader();updateRings();renderTasks();if(activeTab==="history")renderHistory();}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.textContent.toLowerCase()===tab));
+  document.getElementById("panelToday").style.display=tab==="today"?"":"none";
+  document.getElementById("panelHistory").style.display=tab==="history"?"":"none";
+  if(tab==="history")renderHistory();
+}
+function switchHF(hf){
+  activeHF=hf;
+  document.querySelectorAll(".hf-btn").forEach(b=>b.classList.toggle("active",b.textContent.toLowerCase()===hf));
+  renderHistory();
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function miniRing(p,color){
+  const r=16,cx=20,cy=20,circ=2*Math.PI*r,off=circ-(circ*Math.min(p,100)/100);
+  return`<svg width="40" height="40" viewBox="0 0 40 40" style="flex-shrink:0">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a30" stroke-width="5"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+      stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"
+      stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
+  </svg>`;
+}
+
+function renderHistory(){
+  const el=document.getElementById("historyRows"),h=state.history;
+  let entries=[];
+  if(activeHF==="daily"){
+    entries=Object.entries(h).filter(([k])=>k.length===10).sort(([a],[b])=>b.localeCompare(a))
+      .map(([k,v])=>({label:fmtDate(k),p:pct(v.completed,v.total),sub:`${v.completed} of ${v.total} tasks`,color:"#7c6af7",cls:"cp"}));
+  }else if(activeHF==="weekly"){
+    entries=Object.entries(h).filter(([k])=>k.startsWith("w_")).sort(([a],[b])=>b.localeCompare(a))
+      .map(([k,v])=>({label:fmtWeek(k.replace("w_","")),p:pct(v.completed,v.total),sub:`${v.completed} of ${v.total} tasks`,color:"#3ecfcf",cls:"ct"}));
+  }else{
+    entries=Object.entries(h).filter(([k])=>k.startsWith("m_")).sort(([a],[b])=>b.localeCompare(a))
+      .map(([k,v])=>({label:fmtMonth(k.replace("m_","")),p:pct(v.completed,v.total),sub:`${v.completed} of ${v.total} tasks`,color:"#f97066",cls:"cr"}));
+  }
+  if(!entries.length){el.innerHTML=`<div class="task-empty" style="margin-top:24px">No history yet.<br/>Complete tasks and they'll appear here.</div>`;return;}
+  el.innerHTML=entries.map(e=>`
+    <div class="h-row">
+      ${miniRing(e.p,e.color)}
+      <div class="h-info">
+        <div class="h-period">${e.label}</div>
+        <div class="h-sub">${e.sub}</div>
+      </div>
+      <div class="h-pct ${e.cls}">${Math.round(e.p)}%</div>
+    </div>`).join("");
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+load();
+applyMode();
+refresh();
+</script>
+</body>
+</html>
